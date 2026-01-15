@@ -1,13 +1,46 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { LoginPage } from '@/components/LoginPage';
+import { Dashboard } from '@/components/Dashboard';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { usePWA } from '@/hooks/usePWA';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { isAuthenticated, isLoading } = useAuth();
+  const { isInstalled } = usePWA();
+  const [showApp, setShowApp] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setShowApp(true);
+    }
+  }, [isLoading]);
+
+  if (isLoading || !showApp) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-16 w-16 rounded-2xl gradient-primary shadow-button flex items-center justify-center animate-pulse-soft">
+            <span className="text-2xl font-display font-bold text-primary-foreground">P</span>
+          </div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Install prompt - shows for non-installed users */}
+      {!isInstalled && <InstallPrompt />}
+      
+      {/* Main app */}
+      {isAuthenticated ? (
+        <Dashboard />
+      ) : (
+        <LoginPage onLoginSuccess={() => window.location.reload()} />
+      )}
+    </>
   );
 };
 
