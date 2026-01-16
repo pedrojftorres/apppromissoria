@@ -20,10 +20,7 @@ export const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
     setError('');
     setIsLoading(true);
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const result = login(name, password);
+    const result = await login(name, password);
     
     if (result.success) {
       onLoginSuccess();
@@ -113,7 +110,7 @@ export const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
 
       {/* Footer */}
       <div className="p-6 text-center text-sm text-muted-foreground">
-        <p>Seus dados são salvos localmente de forma segura</p>
+        <p>Dados sincronizados em tempo real</p>
       </div>
     </div>
   );

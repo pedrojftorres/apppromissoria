@@ -17,29 +17,34 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { PromissoryCard } from './PromissoryCard';
 import { NotificationsSheet } from './NotificationsSheet';
 import { SettingsSheet } from './SettingsSheet';
-import { requestNotificationPermission, scheduleReminders } from '@/lib/notifications';
+import { subscribeToPush, requestPushPermission } from '@/lib/pushNotifications';
 
 export const Dashboard = () => {
   const { user, logout } = useAuth();
-  const { contract, getStats, markAsPaidByDebtor, confirmPaymentByCreditor } = useContract();
+  const { promissories, creditorPixKey, isLoading, getStats, markAsPaidByDebtor, confirmPaymentByCreditor } = useContract();
   const { unreadCount } = useNotifications(user?.id);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
 
   useEffect(() => {
-    requestNotificationPermission();
-    scheduleReminders();
-  }, []);
+    const setupPush = async () => {
+      if (user?.id) {
+        await requestPushPermission();
+        await subscribeToPush(user.id);
+      }
+    };
+    setupPush();
+  }, [user?.id]);
 
-  if (!user || !contract) return null;
+  if (!user || isLoading) return null;
 
   const stats = getStats();
   const isDebtor = user.role === 'debtor';
 
   const handleCopyPix = () => {
-    if (contract.creditorPixKey) {
-      navigator.clipboard.writeText(contract.creditorPixKey);
+    if (creditorPixKey) {
+      navigator.clipboard.writeText(creditorPixKey);
       setCopiedPix(true);
       setTimeout(() => setCopiedPix(false), 2000);
     }
@@ -131,7 +136,7 @@ export const Dashboard = () => {
           <div className="h-3 overflow-hidden rounded-full bg-secondary">
             <div 
               className="h-full rounded-full gradient-primary transition-all duration-500"
-              style={{ width: `${(stats.paid / stats.total) * 100}%` }}
+              style={{ width: `${stats.total > 0 ? (stats.paid / stats.total) * 100 : 0}%` }}
             />
           </div>
           <div className="mt-3 flex items-center justify-between text-sm">
@@ -145,7 +150,7 @@ export const Dashboard = () => {
         </div>
 
         {/* PIX Key (for debtor) */}
-        {isDebtor && contract.creditorPixKey && (
+        {isDebtor && creditorPixKey && (
           <div className="mb-6 rounded-xl bg-card p-4 shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -155,7 +160,7 @@ export const Dashboard = () => {
                 <div>
                   <p className="text-sm font-medium text-foreground">Chave PIX do Credor</p>
                   <p className="text-sm text-muted-foreground truncate max-w-[180px]">
-                    {contract.creditorPixKey}
+                    {creditorPixKey}
                   </p>
                 </div>
               </div>
@@ -181,7 +186,7 @@ export const Dashboard = () => {
             Parcelas
           </h2>
           
-          {contract.promissories.map((promissory) => (
+          {promissories.map((promissory) => (
             <PromissoryCard
               key={promissory.id}
               promissory={promissory}
@@ -204,7 +209,7 @@ export const Dashboard = () => {
         open={showSettings}
         onOpenChange={setShowSettings}
         userRole={user.role}
-        currentPixKey={contract.creditorPixKey}
+        currentPixKey={creditorPixKey || undefined}
       />
     </div>
   );

@@ -1,64 +1,82 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User } from '@/types/promissory';
-import { getUser, saveUser, clearUser } from '@/lib/storage';
+import { supabase } from '@/integrations/supabase/client';
 
-// Simulated user credentials
-const USERS = {
-  debtor: { name: 'Pedro Henrique Torres', password: 'pedro123' },
-  creditor: { name: 'Lindomar de Almeida Barbosa', password: 'lindomar123' },
-};
+interface User {
+  id: string;
+  name: string;
+  role: 'debtor' | 'creditor';
+  pix_key?: string;
+}
+
+const STORAGE_KEY = 'promissoria_user';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = getUser();
+    // Load from localStorage first
+    const savedUser = localStorage.getItem(STORAGE_KEY);
     if (savedUser) {
-      setUser(savedUser);
+      setUser(JSON.parse(savedUser));
     }
     setIsLoading(false);
   }, []);
 
-  const login = useCallback((name: string, password: string): { success: boolean; error?: string } => {
+  const login = useCallback(async (name: string, password: string): Promise<{ success: boolean; error?: string }> => {
     const lowerName = name.toLowerCase().trim();
     
-    // Check debtor
-    if (lowerName.includes('pedro') && password === USERS.debtor.password) {
-      const newUser: User = {
-        id: 'debtor',
-        name: USERS.debtor.name,
-        role: 'debtor',
-      };
-      saveUser(newUser);
-      setUser(newUser);
-      return { success: true };
-    }
+    try {
+      // Query database for user
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .ilike('name', `%${lowerName.split(' ')[0]}%`);
+      
+      if (error) {
+        console.error('Login error:', error);
+        return { success: false, error: 'Erro ao conectar ao servidor' };
+      }
 
-    // Check creditor
-    if (lowerName.includes('lindomar') && password === USERS.creditor.password) {
-      const newUser: User = {
-        id: 'creditor',
-        name: USERS.creditor.name,
-        role: 'creditor',
-      };
-      saveUser(newUser);
-      setUser(newUser);
-      return { success: true };
-    }
+      const matchedUser = users?.find(u => 
+        u.password_hash === password
+      );
 
-    return { success: false, error: 'Nome ou senha inválidos' };
+      if (matchedUser) {
+        const userData: User = {
+          id: matchedUser.id,
+          name: matchedUser.name,
+          role: matchedUser.role as 'debtor' | 'creditor',
+          pix_key: matchedUser.pix_key
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        setUser(userData);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Nome ou senha inválidos' };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'Erro ao fazer login' };
+    }
   }, []);
 
   const logout = useCallback(() => {
-    clearUser();
+    localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }, []);
 
-  const updatePixKey = useCallback((pixKey: string) => {
-    if (user) {
-      const updatedUser = { ...user, pixKey };
-      saveUser(updatedUser);
+  const updatePixKey = useCallback(async (pixKey: string) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('users')
+      .update({ pix_key: pixKey })
+      .eq('id', user.id);
+
+    if (!error) {
+      const updatedUser = { ...user, pix_key: pixKey };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
     }
   }, [user]);

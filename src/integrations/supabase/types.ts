@@ -14,7 +14,145 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promissories: {
+        Row: {
+          amount: number
+          created_at: string
+          creditor_confirmed_at: string | null
+          debtor_confirmed_at: string | null
+          due_date: string
+          id: string
+          number: number
+          paid_at: string | null
+          receipt_url: string | null
+          status: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          creditor_confirmed_at?: string | null
+          debtor_confirmed_at?: string | null
+          due_date: string
+          id?: string
+          number: number
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creditor_confirmed_at?: string | null
+          debtor_confirmed_at?: string | null
+          due_date?: string
+          id?: string
+          number?: number
+          paid_at?: string | null
+          receipt_url?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          password_hash: string
+          pix_key: string | null
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          password_hash: string
+          pix_key?: string | null
+          role: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          password_hash?: string
+          pix_key?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
