@@ -1,4 +1,4 @@
-import { Bell, X, Check, Trash2 } from 'lucide-react';
+import { Bell, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -113,7 +113,7 @@ export const NotificationsSheet = ({
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      {formatTime(notification.createdAt)}
+                      {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </div>

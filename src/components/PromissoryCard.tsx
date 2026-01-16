@@ -10,7 +10,18 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Promissory } from '@/types/promissory';
+
+interface Promissory {
+  id: string;
+  number: number;
+  amount: number;
+  due_date: string;
+  status: 'pending' | 'paid_by_debtor' | 'confirmed' | 'overdue';
+  debtor_confirmed_at: string | null;
+  creditor_confirmed_at: string | null;
+  receipt_url: string | null;
+  paid_at: string | null;
+}
 
 interface PromissoryCardProps {
   promissory: Promissory;
@@ -26,9 +37,8 @@ export const PromissoryCard = ({
   onConfirmPayment,
 }: PromissoryCardProps) => {
   const [expanded, setExpanded] = useState(false);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
-  const dueDate = new Date(promissory.dueDate);
+  const dueDate = new Date(promissory.due_date);
   const isOverdue = dueDate < new Date() && promissory.status === 'pending';
   const formattedDate = dueDate.toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -78,7 +88,6 @@ export const PromissoryCard = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        setReceiptPreview(result);
         onMarkAsPaid?.(promissory.id, result);
       };
       reader.readAsDataURL(file);
@@ -141,30 +150,30 @@ export const PromissoryCard = ({
               <p className="text-muted-foreground">Forma</p>
               <p className="font-medium text-foreground">PIX</p>
             </div>
-            {promissory.paidAt && (
+            {promissory.paid_at && (
               <div>
                 <p className="text-muted-foreground">Pago em</p>
                 <p className="font-medium text-foreground">
-                  {new Date(promissory.paidAt).toLocaleDateString('pt-BR')}
+                  {new Date(promissory.paid_at).toLocaleDateString('pt-BR')}
                 </p>
               </div>
             )}
-            {promissory.creditorConfirmedAt && (
+            {promissory.creditor_confirmed_at && (
               <div>
                 <p className="text-muted-foreground">Confirmado em</p>
                 <p className="font-medium text-foreground">
-                  {new Date(promissory.creditorConfirmedAt).toLocaleDateString('pt-BR')}
+                  {new Date(promissory.creditor_confirmed_at).toLocaleDateString('pt-BR')}
                 </p>
               </div>
             )}
           </div>
 
           {/* Receipt preview */}
-          {promissory.receiptUrl && (
+          {promissory.receipt_url && (
             <div className="rounded-lg border border-border p-3">
               <p className="mb-2 text-sm font-medium text-foreground">Comprovante</p>
               <a
-                href={promissory.receiptUrl}
+                href={promissory.receipt_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
