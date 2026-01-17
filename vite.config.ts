@@ -1,24 +1,20 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
 
     VitePWA({
       registerType: "autoUpdate",
 
       strategies: "injectManifest",
 
-      srcDir: "src",
-      filename: "sw.ts",
-
       injectManifest: {
-        swDest: "sw.js", // 👉 arquivo FINAL gerado
+        swSrc: "src/sw.ts",   // ✅ FONTE
+        swDest: "sw.js",      // ✅ GERADO (dist/sw.js)
       },
 
       includeAssets: [
@@ -49,11 +45,11 @@ export default defineConfig(({ mode }) => ({
         ],
       },
     }),
-  ].filter(Boolean),
+  ],
 
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+});
