@@ -43,6 +43,8 @@ export const useNotifications = (userId?: string) => {
 
     if (!userId) return;
 
+    console.log('Setting up realtime subscription for notifications, userId:', userId);
+
     // Subscribe to realtime notifications
     const channel = supabase
       .channel(`notifications-${userId}`)
@@ -55,7 +57,7 @@ export const useNotifications = (userId?: string) => {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('New notification:', payload);
+          console.log('New notification received via realtime:', payload);
           const newNotif = {
             ...payload.new,
             type: (payload.new as any).type as Notification['type']
@@ -65,6 +67,7 @@ export const useNotifications = (userId?: string) => {
           
           // Show browser notification
           if ('Notification' in window && Notification.permission === 'granted') {
+            console.log('Showing browser notification:', newNotif.title);
             new Notification(newNotif.title, {
               body: newNotif.message,
               icon: '/pwa-192x192.png'
@@ -72,9 +75,12 @@ export const useNotifications = (userId?: string) => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [userId, loadNotifications]);

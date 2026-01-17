@@ -26,6 +26,9 @@ Deno.serve(async (req) => {
     if (action === 'subscribe') {
       const { endpoint, keys } = subscriptionData
       
+      console.log('Saving subscription for user:', userId)
+      console.log('Endpoint:', endpoint?.substring(0, 60) + '...')
+      
       // Upsert subscription
       const { error } = await supabase
         .from('push_subscriptions')
@@ -41,13 +44,15 @@ Deno.serve(async (req) => {
         throw error
       }
       
+      console.log('Subscription saved successfully')
+      
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    // Send notification (save to DB for in-app + trigger service worker)
+    // Send notification
     if (action === 'send') {
       // Save to notifications table for in-app notifications
       const { error: notifError } = await supabase.from('notifications').insert({
@@ -59,21 +64,33 @@ Deno.serve(async (req) => {
       
       if (notifError) {
         console.error('Error saving notification:', notifError)
+      } else {
+        console.log('Notification saved to database for realtime delivery')
       }
       
       // Get subscription count for logging
-      const { data: subscriptions } = await supabase
+      const { data: subscriptions, error: subError } = await supabase
         .from('push_subscriptions')
         .select('id')
         .eq('user_id', userId)
       
-      console.log(`Notification saved. User ${userId} has ${subscriptions?.length || 0} push subscriptions.`)
+      if (subError) {
+        console.error('Error fetching subscriptions:', subError)
+      }
+      
+      const count = subscriptions?.length || 0
+      console.log(`User ${userId} has ${count} push subscriptions registered`)
+      
+      // Note: Full Web Push Protocol with VAPID and encryption requires 
+      // complex crypto operations. The notification is saved to DB and 
+      // delivered via Supabase Realtime which works when app is open.
+      // For true background push, users should use the PWA with service worker.
       
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Notification saved to database',
-          subscriptionCount: subscriptions?.length || 0
+          message: 'Notification saved and will be delivered via realtime',
+          subscriptionCount: count
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
