@@ -1,49 +1,39 @@
 /// <reference lib="webworker" />
 
-/* =====================================================
-   TIPAGEM OBRIGATÓRIA PARA WORKBOX (injectManifest)
-===================================================== */
-declare const self: ServiceWorkerGlobalScope & {
-  __WB_MANIFEST: any;
-};
+import { precacheAndRoute } from 'workbox-precaching'
 
-/* =====================================================
-   PONTO DE INJEÇÃO DO MANIFEST (OBRIGATÓRIO)
-===================================================== */
-self.__WB_MANIFEST;
+declare let self: ServiceWorkerGlobalScope
 
-/* =====================================================
-   PUSH NOTIFICATIONS
-===================================================== */
+// 🔴 OBRIGATÓRIO PARA injectManifest
+precacheAndRoute(self.__WB_MANIFEST)
+
+// ===============================
+// PUSH NOTIFICATIONS
+// ===============================
+
 self.addEventListener('push', (event) => {
-  console.log('Push event received:', event);
+  console.log('[SW] Push received')
 
-  let data: {
-    title: string;
-    body: string;
-    icon: string;
-    badge: string;
-    data?: any;
-  } = {
+  let data = {
     title: 'PromissóriasApp',
     body: 'Nova notificação',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-  };
+    data: {},
+  }
 
   if (event.data) {
     try {
-      const payload = event.data.json();
+      const payload = event.data.json()
       data = {
         title: payload.title ?? data.title,
         body: payload.body ?? payload.message ?? data.body,
         icon: payload.icon ?? data.icon,
         badge: data.badge,
         data: payload.data ?? {},
-      };
-    } catch (err) {
-      console.error('Erro ao parsear push:', err);
-      data.body = event.data.text();
+      }
+    } catch {
+      data.body = event.data.text()
     }
   }
 
@@ -55,51 +45,35 @@ self.addEventListener('push', (event) => {
       vibrate: [200, 100, 200],
       tag: 'promissoria-notification',
       requireInteraction: true,
-      data: data.data,
-      actions: [
-        { action: 'open', title: 'Abrir App' },
-        { action: 'close', title: 'Fechar' },
-      ],
     })
-  );
-});
+  )
+})
 
-/* =====================================================
-   CLICK NA NOTIFICAÇÃO
-===================================================== */
+// ===============================
+// CLICK NA NOTIFICAÇÃO
+// ===============================
+
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
-
-  event.notification.close();
-
-  if (event.action === 'close') {
-    return;
-  }
+  event.notification.close()
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
-      for (const client of clientsArr) {
-        if ('focus' in client) {
-          return client.focus();
-        }
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) return client.focus()
       }
-
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
+      if (self.clients.openWindow) return self.clients.openWindow('/')
     })
-  );
-});
+  )
+})
 
-/* =====================================================
-   CICLO DE VIDA DO SERVICE WORKER
-===================================================== */
+// ===============================
+// LIFECYCLE
+// ===============================
+
 self.addEventListener('install', () => {
-  console.log('Service Worker instalado');
-  self.skipWaiting();
-});
+  self.skipWaiting()
+})
 
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker ativado');
-  event.waitUntil(self.clients.claim());
-});
+  event.waitUntil(self.clients.claim())
+})
