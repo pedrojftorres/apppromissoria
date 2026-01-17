@@ -1,5 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
 
+// VAPID Public Key - generate your own for production
+const VAPID_PUBLIC_KEY = 'BLBz5Gh3qHVIUlG4HKV3MYy-tPxZHvXZkL3mS6z7n3f1XhQZGvQbJhELPbkKdHqNMPLJ3lPrO9oRtYz8xS6MqJU';
+
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray.buffer;
+}
+
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!('serviceWorker' in navigator)) {
     console.log('Service Worker not supported');
@@ -25,6 +41,7 @@ export const requestPushPermission = async (): Promise<boolean> => {
   }
 
   const permission = await Notification.requestPermission();
+  console.log('Push permission:', permission);
   return permission === 'granted';
 };
 
@@ -40,13 +57,60 @@ export const subscribeToPush = async (userId: string): Promise<boolean> => {
     // Register service worker
     const registration = await registerServiceWorker();
     if (!registration) {
+      console.log('Service worker registration failed');
       return false;
     }
 
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
+    console.log('Service worker ready');
 
-    console.log('Push subscription setup complete for user:', userId);
+    // Check for existing subscription
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      // Create new subscription
+      console.log('Creating new push subscription...');
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        console.log('Push subscription created:', subscription);
+      } catch (subError) {
+        console.error('Error creating push subscription:', subError);
+        // Continue without push - use realtime instead
+        console.log('Push subscription setup complete (realtime only) for user:', userId);
+        return true;
+      }
+    } else {
+      console.log('Existing subscription found:', subscription);
+    }
+
+    // Send subscription to server
+    const subscriptionJson = subscription.toJSON();
+    console.log('Sending subscription to server for user:', userId);
+    
+    const { data, error } = await supabase.functions.invoke('send-push', {
+      body: {
+        action: 'subscribe',
+        userId,
+        subscriptionData: {
+          endpoint: subscriptionJson.endpoint,
+          keys: {
+            p256dh: subscriptionJson.keys?.p256dh,
+            auth: subscriptionJson.keys?.auth
+          }
+        }
+      }
+    });
+
+    if (error) {
+      console.error('Error saving subscription:', error);
+      return false;
+    }
+
+    console.log('Push subscription saved successfully:', data);
     return true;
   } catch (error) {
     console.error('Error subscribing to push:', error);
@@ -61,6 +125,8 @@ export const sendPushNotification = async (
   type: 'payment_marked' | 'payment_confirmed' | 'reminder'
 ): Promise<boolean> => {
   try {
+    console.log('Sending push notification to:', targetUserId, { title, message, type });
+    
     const { data, error } = await supabase.functions.invoke('send-push', {
       body: {
         action: 'send',
