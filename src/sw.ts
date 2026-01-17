@@ -1,79 +1,53 @@
 /// <reference lib="webworker" />
 
-import { precacheAndRoute } from 'workbox-precaching'
-
-declare let self: ServiceWorkerGlobalScope
-
-// 🔴 OBRIGATÓRIO PARA injectManifest
-precacheAndRoute(self.__WB_MANIFEST)
-
-// ===============================
-// PUSH NOTIFICATIONS
-// ===============================
-
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received')
-
-  let data = {
+  let payload = {
     title: 'PromissóriasApp',
     body: 'Nova notificação',
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
-    data: {},
-  }
+  };
 
   if (event.data) {
     try {
-      const payload = event.data.json()
-      data = {
-        title: payload.title ?? data.title,
-        body: payload.body ?? payload.message ?? data.body,
-        icon: payload.icon ?? data.icon,
-        badge: data.badge,
-        data: payload.data ?? {},
-      }
+      payload = {
+        ...payload,
+        ...event.data.json(),
+      };
     } catch {
-      data.body = event.data.text()
+      payload.body = event.data.text();
     }
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      vibrate: [200, 100, 200],
-      tag: 'promissoria-notification',
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/pwa-192x192.png',
+      badge: '/pwa-192x192.png',
+      tag: 'promissoria',
+      renotify: true,
       requireInteraction: true,
     })
-  )
-})
-
-// ===============================
-// CLICK NA NOTIFICAÇÃO
-// ===============================
+  );
+});
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
+  event.notification.close();
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ('focus' in client) return client.focus()
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
+      const hadWindow = clientsArr.some((client) => {
+        if (client.url === self.location.origin + '/' && 'focus' in client) {
+          client.focus();
+          return true;
+        }
+        return false;
+      });
+
+      if (!hadWindow && clients.openWindow) {
+        return clients.openWindow('/');
       }
-      if (self.clients.openWindow) return self.clients.openWindow('/')
     })
-  )
-})
+  );
+});
 
-// ===============================
-// LIFECYCLE
-// ===============================
-
-self.addEventListener('install', () => {
-  self.skipWaiting()
-})
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
-})
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
