@@ -5,14 +5,6 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
-    },
-  },
-
   plugins: [
     react(),
     mode === "development" && componentTagger(),
@@ -20,15 +12,13 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
 
-      // ✅ CONTROLE TOTAL DO SERVICE WORKER
       strategies: "injectManifest",
 
       srcDir: "src",
       filename: "sw.ts",
 
-      // 🔴 ESSENCIAL PARA NÃO QUEBRAR O BUILD
       injectManifest: {
-        swDest: "sw.js",
+        swDest: "sw.js", // 👉 arquivo FINAL gerado
       },
 
       includeAssets: [
@@ -39,15 +29,12 @@ export default defineConfig(({ mode }) => ({
       ],
 
       manifest: {
-        name: "PromissóriasApp - Gestão de Pagamentos",
+        name: "PromissóriasApp",
         short_name: "Promissórias",
-        description: "Gerencie suas promissórias e pagamentos de forma segura",
+        start_url: "/",
+        display: "standalone",
         theme_color: "#2f855a",
         background_color: "#f5f7f5",
-        display: "standalone",
-        orientation: "portrait",
-        scope: "/",
-        start_url: "/",
         icons: [
           {
             src: "/pwa-192x192.png",
@@ -58,12 +45,6 @@ export default defineConfig(({ mode }) => ({
             src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable",
           },
         ],
       },
