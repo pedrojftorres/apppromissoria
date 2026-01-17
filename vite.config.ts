@@ -20,12 +20,23 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
 
-      // 🔴 ISSO É O MAIS IMPORTANTE
+      // ✅ CONTROLE TOTAL DO SERVICE WORKER
       strategies: "injectManifest",
+
       srcDir: "src",
       filename: "sw.ts",
 
-      includeAssets: ["favicon.ico", "robots.txt"],
+      // 🔴 ESSENCIAL PARA NÃO QUEBRAR O BUILD
+      injectManifest: {
+        swDest: "sw.js",
+      },
+
+      includeAssets: [
+        "favicon.ico",
+        "robots.txt",
+        "pwa-192x192.png",
+        "pwa-512x512.png",
+      ],
 
       manifest: {
         name: "PromissóriasApp - Gestão de Pagamentos",

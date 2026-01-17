@@ -1,5 +1,8 @@
 /// <reference lib="webworker" />
 
+// 🔴 OBRIGATÓRIO para injectManifest
+self.__WB_MANIFEST;
+
 self.addEventListener('push', (event) => {
   let payload = {
     title: 'PromissóriasApp',
@@ -34,20 +37,15 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
-      const hadWindow = clientsArr.some((client) => {
-        if (client.url === self.location.origin + '/' && 'focus' in client) {
-          client.focus();
-          return true;
-        }
-        return false;
-      });
-
-      if (!hadWindow && clients.openWindow) {
-        return clients.openWindow('/');
+      for (const client of clientsArr) {
+        if ('focus' in client) return client.focus();
       }
+      if (clients.openWindow) return clients.openWindow('/');
     })
   );
 });
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (event) =>
+  event.waitUntil(self.clients.claim())
+);
